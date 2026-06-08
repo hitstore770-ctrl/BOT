@@ -7,16 +7,19 @@
  *   1. Telegram long-polls for incoming messages.
  *   2. For each text message we run a single, independent Gemini generation
  *      (no chat history is kept — the system is intentionally stateless).
- *   3. The persona/rules live in SYSTEM_PROMPT and are passed to Gemini as a
- *      `systemInstruction`, so they accompany every user message.
+ *   3. The persona/rules (SYSTEM_PROMPT) and the facts (KNOWLEDGE_BASE) are
+ *      combined into one systemInstruction, so they accompany every message.
  *   4. The generated text is sent straight back to the user.
+ *
+ * Uses Google's unified GenAI SDK: @google/genai.
  */
 
 require('dotenv').config();
 
 const TelegramBot = require('node-telegram-bot-api');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const { SYSTEM_PROMPT } = require('./systemPrompt');
+const { KNOWLEDGE_BASE } = require('./knowledgeBase');
 
 // --- Config -----------------------------------------------------------------
 
@@ -35,26 +38,32 @@ if (!TELEGRAM_BOT_TOKEN || !GEMINI_API_KEY) {
   process.exit(1);
 }
 
+// SYSTEM_PROMPT defines HOW the assistant behaves; KNOWLEDGE_BASE defines WHAT
+// it knows. Together they form the single system instruction sent with every
+// request, kept separate from the user's own text.
+const SYSTEM_INSTRUCTION = `${SYSTEM_PROMPT}\n\n${KNOWLEDGE_BASE}`;
+
 // --- Gemini -----------------------------------------------------------------
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-  model: GEMINI_MODEL,
-  // The persona + rules are attached here so they are sent with every
-  // request while staying separate from the user's own text.
-  systemInstruction: SYSTEM_PROMPT,
-});
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 /**
  * Generate a stateless reply for a single user message.
  * Each call is independent — no conversation memory is retained.
  *
  * @param {string} userText - The raw text the user sent.
- * @returns {Promise<string>} The model's reply text.
+ * @returns {Promise<string|undefined>} The model's reply text, or undefined if
+ *   the model produced no text (e.g. blocked by a safety filter).
  */
 async function generateReply(userText) {
-  const result = await model.generateContent(userText);
-  return result.response.text();
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: userText,
+    config: {
+      systemInstruction: SYSTEM_INSTRUCTION,
+    },
+  });
+  return response.text;
 }
 
 // --- Telegram ---------------------------------------------------------------
@@ -73,6 +82,16 @@ bot.on('message', async (msg) => {
     bot.sendChatAction(chatId, 'typing').catch(() => {});
 
     const reply = await generateReply(userText);
+
+    // `response.text` can be undefined (e.g. safety block / empty candidate).
+    if (!reply) {
+      await bot.sendMessage(
+        chatId,
+        'מצטער, לא הצלחתי להפיק תשובה כרגע. נסה לנסח שוב בבקשה 🙏'
+      );
+      return;
+    }
+
     await bot.sendMessage(chatId, reply);
   } catch (err) {
     console.error(`Error handling message from chat ${chatId}:`, err.message);

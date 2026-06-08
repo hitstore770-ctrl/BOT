@@ -6,15 +6,18 @@ there is no session/state machine, so the bot never "traps" the user in a flow.
 
 ## Architecture
 
-| File              | Responsibility                                                        |
-| ----------------- | --------------------------------------------------------------------- |
-| `index.js`        | Telegram polling + Gemini integration (the runtime).                  |
-| `systemPrompt.js` | Exports `SYSTEM_PROMPT` — the persona & rules (Hebrew).               |
-| `.env`            | Secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY` (not committed).      |
-| `.env.example`    | Template for `.env`.                                                   |
+| File               | Responsibility                                                       |
+| ------------------ | ------------------------------------------------------------------- |
+| `index.js`         | Telegram polling + Gemini integration (the runtime).                |
+| `systemPrompt.js`  | Exports `SYSTEM_PROMPT` — the persona & behaviour rules (Hebrew).    |
+| `knowledgeBase.js` | Exports `KNOWLEDGE_BASE` — the facts the assistant answers from.     |
+| `.env`             | Secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY` (not committed).     |
+| `.env.example`     | Template for `.env`.                                                 |
 
-The persona is passed to Gemini as a `systemInstruction`, so it accompanies
-every user message while staying separate from the user's own text.
+The model talks to Gemini through Google's unified **`@google/genai`** SDK.
+`SYSTEM_PROMPT` (how to behave) and `KNOWLEDGE_BASE` (what to know) are combined
+into a single `systemInstruction`, so they accompany every user message while
+staying separate from the user's own text.
 
 ## Setup
 

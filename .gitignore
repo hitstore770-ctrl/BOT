@@ -4,6 +4,10 @@ node_modules/
 # Environment variables (never commit real secrets)
 .env
 
+# whatsapp-web.js session + browser cache (contains your logged-in session)
+.wwebjs_auth/
+.wwebjs_cache/
+
 # Logs
 *.log
 npm-debug.log*

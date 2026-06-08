@@ -1,7 +1,7 @@
 {
   "name": "bot",
   "version": "1.0.0",
-  "description": "Lightweight, stateless Telegram AI chatbot powered by Google Gemini.",
+  "description": "Lightweight, stateless WhatsApp AI chatbot powered by Google Gemini (whatsapp-web.js, no Meta API).",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -17,6 +17,7 @@
   "dependencies": {
     "@google/genai": "^2.8.0",
     "dotenv": "^17.4.2",
-    "node-telegram-bot-api": "^0.67.0"
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
   }
 }

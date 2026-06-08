@@ -1,40 +1,41 @@
 /**
  * index.js
  *
- * Lightweight, stateless Telegram <-> Gemini bridge.
+ * Lightweight, stateless WhatsApp <-> Gemini bridge.
+ *
+ * Uses whatsapp-web.js (free, no Meta/Cloud API) — it drives a real WhatsApp
+ * Web session through a headless browser, so you authenticate once by scanning
+ * a QR code. Gemini answers each message via Google's @google/genai SDK.
  *
  * Flow:
- *   1. Telegram long-polls for incoming messages.
- *   2. For each text message we run a single, independent Gemini generation
- *      (no chat history is kept — the system is intentionally stateless).
- *   3. The persona/rules (SYSTEM_PROMPT) and the facts (KNOWLEDGE_BASE) are
- *      combined into one systemInstruction, so they accompany every message.
- *   4. The generated text is sent straight back to the user.
- *
- * Uses Google's unified GenAI SDK: @google/genai.
+ *   1. On first run a QR code is printed; scan it from WhatsApp > Linked Devices.
+ *   2. For each incoming PRIVATE message we run a single, independent Gemini
+ *      generation (no chat history — the system is intentionally stateless).
+ *   3. SYSTEM_PROMPT (how to behave) + KNOWLEDGE_BASE (what to know) are combined
+ *      into one systemInstruction sent with every message.
+ *   4. The generated text is sent straight back with message.reply().
  */
 
 require('dotenv').config();
 
-const TelegramBot = require('node-telegram-bot-api');
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
 const { GoogleGenAI } = require('@google/genai');
 const { SYSTEM_PROMPT } = require('./systemPrompt');
 const { KNOWLEDGE_BASE } = require('./knowledgeBase');
 
 // --- Config -----------------------------------------------------------------
 
-const { TELEGRAM_BOT_TOKEN, GEMINI_API_KEY } = process.env;
+const { GEMINI_API_KEY } = process.env;
 
-// Free-tier model requested. If this ever returns a 404 "model not found",
-// Gemini 1.5 may be retired for new projects — swap in 'gemini-2.0-flash'
-// or 'gemini-2.5-flash' (both have free tiers) without any other changes.
+// Free-tier model. If this ever returns a 404 "model not found", Gemini 1.5
+// may be retired for new projects — swap in 'gemini-2.0-flash' or
+// 'gemini-2.5-flash' (both have free tiers) without any other changes.
 const GEMINI_MODEL = 'gemini-1.5-flash';
 
-// Fail fast with a clear message instead of crashing deep inside the SDK.
-if (!TELEGRAM_BOT_TOKEN || !GEMINI_API_KEY) {
-  console.error(
-    'Missing credentials. Set TELEGRAM_BOT_TOKEN and GEMINI_API_KEY in your .env file.'
-  );
+// WhatsApp needs no API token (QR auth), so Gemini is the only required secret.
+if (!GEMINI_API_KEY) {
+  console.error('Missing GEMINI_API_KEY. Set it in your .env file.');
   process.exit(1);
 }
 
@@ -66,44 +67,73 @@ async function generateReply(userText) {
   return response.text;
 }
 
-// --- Telegram ---------------------------------------------------------------
+// --- WhatsApp client --------------------------------------------------------
 
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+const client = new Client({
+  // LocalAuth persists the session to disk (.wwebjs_auth/) so you only scan
+  // the QR code once, not on every restart.
+  authStrategy: new LocalAuth(),
+  puppeteer: {
+    // --no-sandbox is required when running as root, in containers, or on many
+    // Linux servers. It is harmless on a normal desktop and can be removed there.
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  },
+});
 
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const userText = msg.text;
+// Print the login QR code in the terminal.
+client.on('qr', (qr) => {
+  qrcode.generate(qr, { small: true });
+  console.log('📲 Scan the QR code above with WhatsApp → Linked Devices to log in.');
+});
 
-  // Ignore non-text payloads (stickers, photos, voice, etc.).
+client.on('ready', () => {
+  console.log('✅ WhatsApp client is ready and listening for messages.');
+});
+
+client.on('auth_failure', (msg) => {
+  console.error('Authentication failure:', msg);
+});
+
+client.on('disconnected', (reason) => {
+  console.warn('Client was disconnected:', reason);
+});
+
+// Handle incoming messages.
+client.on('message', async (message) => {
+  // CRITICAL: only respond to private 1:1 chats.
+  //   - groups end in '@g.us'  -> ignore (avoids spamming whole groups)
+  //   - status updates are 'status@broadcast' -> ignore
+  if (message.from.includes('@g.us') || message.from === 'status@broadcast') {
+    return;
+  }
+
+  const userText = message.body;
+
+  // Skip empty bodies (e.g. media without a caption, system messages).
   if (!userText) return;
 
   try {
-    // Let the user know we're working while Gemini thinks.
-    bot.sendChatAction(chatId, 'typing').catch(() => {});
-
     const reply = await generateReply(userText);
 
     // `response.text` can be undefined (e.g. safety block / empty candidate).
-    if (!reply) {
-      await bot.sendMessage(
-        chatId,
-        'מצטער, לא הצלחתי להפיק תשובה כרגע. נסה לנסח שוב בבקשה 🙏'
-      );
-      return;
-    }
-
-    await bot.sendMessage(chatId, reply);
+    await message.reply(
+      reply || 'מצטער, לא הצלחתי להפיק תשובה כרגע. נסה לנסח שוב בבקשה 🙏'
+    );
   } catch (err) {
-    console.error(`Error handling message from chat ${chatId}:`, err.message);
-    await bot
-      .sendMessage(chatId, 'מצטער, נתקלתי בתקלה רגעית. נסה שוב בעוד רגע 🙏')
-      .catch(() => {});
+    console.error(`Error replying to ${message.from}:`, err.message);
+    // Best-effort apology; ignore a failure to deliver it.
+    try {
+      await message.reply('מצטער, נתקלתי בתקלה רגעית. נסה שוב בעוד רגע 🙏');
+    } catch (_) {
+      /* swallow */
+    }
   }
 });
 
-// Surface polling problems (e.g. bad token, network) without crashing.
-bot.on('polling_error', (err) => {
-  console.error('Polling error:', err.message);
+// Launch the headless browser and start the session.
+client.initialize().catch((err) => {
+  console.error('Failed to initialize WhatsApp client:', err.message);
+  process.exit(1);
 });
 
-console.log(`🤖 Bot is up and polling. Model: ${GEMINI_MODEL}`);
+console.log('⏳ Starting WhatsApp client… a QR code will appear shortly.');

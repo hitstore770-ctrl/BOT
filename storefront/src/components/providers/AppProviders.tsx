@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { CartDrawer } from "@/components/ui/CartDrawer";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 
 import { ThemeProvider } from "./ThemeProvider";
@@ -28,10 +29,12 @@ import { ThemeProvider } from "./ThemeProvider";
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
-      <CartProvider>
-        {children}
-        <CartDrawer />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          {children}
+          <CartDrawer />
+        </CartProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

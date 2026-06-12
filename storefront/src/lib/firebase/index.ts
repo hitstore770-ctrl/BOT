@@ -1,27 +1,20 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
 
 import { firebaseConfig, isFirebaseConfigured } from "./config";
 
+export { isFirebaseConfigured };
+
 /**
- * Firebase singleton initializer.
+ * Firebase singletons (App + Auth).
  *
  * Next.js can evaluate modules multiple times (HMR, server/client), so we guard
  * with `getApps()` to avoid the "Firebase App named '[DEFAULT]' already exists"
- * error. Initialization is lazy and only runs once config is actually present.
+ * error. Initialization is lazy and only runs once config is actually present,
+ * so the app never crashes before `.env.local` is populated.
  *
- * ──────────────────────────────────────────────────────────────────────────
- * FUTURE INTEGRATION (uncomment once `.env.local` is populated):
- *
- *   import { getAuth } from "firebase/auth";
- *   import { getFirestore } from "firebase/firestore";
- *   import { getStorage } from "firebase/storage";
- *
- *   export const auth = getAuth(getFirebaseApp());
- *   export const db = getFirestore(getFirebaseApp());
- *   export const storage = getStorage(getFirebaseApp());
- *
- * For now we only expose the app accessor so nothing crashes pre-config.
- * ──────────────────────────────────────────────────────────────────────────
+ * TODO(firestore/storage): add `getFirebaseDb()` / `getFirebaseStorage()`
+ * accessors here following the same lazy, null-safe pattern when CRUD lands.
  */
 export function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured) {
@@ -34,4 +27,14 @@ export function getFirebaseApp(): FirebaseApp | null {
   }
 
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
+}
+
+let authInstance: Auth | null = null;
+
+/** Lazily resolve the Firebase Auth instance, or null when unconfigured. */
+export function getFirebaseAuth(): Auth | null {
+  const app = getFirebaseApp();
+  if (!app) return null;
+  if (!authInstance) authInstance = getAuth(app);
+  return authInstance;
 }

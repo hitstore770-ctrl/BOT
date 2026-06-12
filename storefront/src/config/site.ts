@@ -21,19 +21,19 @@ export const siteConfig = {
 } as const;
 
 export const navLinks: NavLink[] = [
-  { label: "The Vault", href: "#vault" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Reviews", href: "#reviews" },
-  { label: "Support", href: "#support" },
+  { label: "The Vault", href: "/vault" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Reviews", href: "/#reviews" },
+  { label: "Support", href: "/#support" },
 ];
 
 export const footerLinks: { title: string; links: NavLink[] }[] = [
   {
     title: "Product",
     links: [
-      { label: "The Vault", href: "#vault" },
-      { label: "Best Sellers", href: "#vault" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "The Vault", href: "/vault" },
+      { label: "Best Sellers", href: "/#vault" },
+      { label: "Pricing", href: "/#pricing" },
       { label: "What's New", href: "#" },
     ],
   },

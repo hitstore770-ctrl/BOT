@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 import { PremiumButton } from "@/components/ui/PremiumButton";
 
@@ -69,11 +70,11 @@ export function Hero() {
 
         {/* CTAs */}
         <motion.div variants={item} className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
-          <a href="#vault">
+          <Link href="/vault">
             <PremiumButton size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
               Explore The Vault
             </PremiumButton>
-          </a>
+          </Link>
           <a href="#how-it-works">
             <PremiumButton size="lg" variant="ghost">
               See how it works

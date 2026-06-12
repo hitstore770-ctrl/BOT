@@ -1,8 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 import { ChecklistCard } from "@/components/ui/ChecklistCard";
+import { PremiumButton } from "@/components/ui/PremiumButton";
 import { featuredChecklists } from "@/data/checklists";
 
 /**
@@ -39,6 +42,15 @@ export function FeaturedVault() {
           {featuredChecklists.map((checklist, index) => (
             <ChecklistCard key={checklist.id} checklist={checklist} index={index} />
           ))}
+        </div>
+
+        {/* Link to the full catalog */}
+        <div className="mt-12 flex justify-center">
+          <Link href="/vault">
+            <PremiumButton variant="secondary" size="lg" rightIcon={<ArrowRight className="h-5 w-5" />}>
+              Browse the full vault
+            </PremiumButton>
+          </Link>
         </div>
       </div>
     </section>

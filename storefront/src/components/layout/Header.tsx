@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, ShoppingBag, Vault, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { PremiumButton } from "@/components/ui/PremiumButton";
@@ -29,24 +30,24 @@ export function Header() {
       <div className="glass border-x-0 border-t-0">
         <nav className="container flex h-16 items-center justify-between">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2 font-semibold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-accent-foreground">
               <Vault className="h-4.5 w-4.5" />
             </span>
             <span className="text-base">{siteConfig.name}</span>
-          </a>
+          </Link>
 
           {/* Desktop nav */}
           <ul className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => (
               <li key={link.href}>
-                <a
+                <Link
                   href={link.href}
                   className="rounded-full px-4 py-2 text-sm text-muted-foreground
                     transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {link.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -114,14 +115,14 @@ export function Header() {
             <ul className="container flex flex-col gap-1 py-4">
               {navLinks.map((link) => (
                 <li key={link.href}>
-                  <a
+                  <Link
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
                     className="block rounded-xl px-4 py-3 text-sm font-medium text-foreground
                       transition-colors hover:bg-muted"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
               <li className="px-2 pt-2">

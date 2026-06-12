@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ───────────────────────────────────────────────────────────────────────────
+ * Design tokens
+ * Colors are stored as raw HSL channels ("H S% L%") so Tailwind's
+ * `hsl(var(--token) / <alpha-value>)` can apply opacity. Light is the default;
+ * `.dark` (toggled by next-themes) overrides them.
+ * ───────────────────────────────────────────────────────────────────────────
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --border: 214 32% 91%;
+    --ring: 262 83% 58%;
+
+    --accent: 262 83% 58%; /* violet — primary brand accent */
+    --accent-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+
+    --card: 224 60% 7%;
+    --card-foreground: 210 40% 98%;
+
+    --border: 215 28% 17%;
+    --ring: 263 70% 60%;
+
+    --accent: 263 70% 64%;
+    --accent-foreground: 224 71% 4%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Premium, accent-tinted text selection. */
+  ::selection {
+    @apply bg-accent/20 text-foreground;
+  }
+}
+
+/*
+ * ───────────────────────────────────────────────────────────────────────────
+ * Reusable component utilities (glassmorphism, gradients, etc.)
+ * ───────────────────────────────────────────────────────────────────────────
+ */
+@layer components {
+  /* Frosted-glass surface for headers, modals and floating cards. */
+  .glass {
+    @apply border border-white/20 bg-white/60 shadow-glass backdrop-blur-xl
+      dark:border-white/10 dark:bg-white/[0.04] dark:shadow-glass-dark;
+  }
+
+  /* Accent gradient text for headlines. */
+  .text-gradient {
+    @apply bg-gradient-to-br from-foreground via-foreground to-accent
+      bg-clip-text text-transparent;
+  }
+
+  /* Thin gradient ring used on premium cards/buttons. */
+  .ring-gradient {
+    @apply relative before:absolute before:inset-0 before:rounded-[inherit]
+      before:p-px before:[background:linear-gradient(140deg,hsl(var(--accent)/0.6),transparent_40%)]
+      before:[mask:linear-gradient(#000_0_0)_content-box,linear-gradient(#000_0_0)]
+      before:[mask-composite:exclude] before:pointer-events-none;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars on horizontal scrollers while keeping them functional. */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}

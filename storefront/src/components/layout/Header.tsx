@@ -7,16 +7,17 @@ import { useState } from "react";
 import { PremiumButton } from "@/components/ui/PremiumButton";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { navLinks, siteConfig } from "@/config/site";
+import { useCart } from "@/hooks/useCart";
 
 /**
  * Sticky, glassmorphic site header. Collapses into an animated sheet on mobile.
  *
- * TODO: the cart badge count and the "User Portal" link will be driven by the
- * Cart + Auth contexts once Firebase is connected.
+ * The cart badge count and drawer trigger are driven by the cart context. The
+ * "User Portal" link will be wired to Auth once Firebase is connected.
  */
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const cartCount = 0; // placeholder — replace with useCart().count
+  const { count: cartCount, openDrawer } = useCart();
 
   return (
     <motion.header
@@ -57,18 +58,28 @@ export function Header() {
             {/* Cart / User Portal */}
             <button
               type="button"
-              aria-label="Open cart"
+              aria-label={`Open cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
+              onClick={openDrawer}
               className="relative grid h-10 w-10 place-items-center rounded-full text-foreground/80
                 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2
                 focus-visible:ring-ring"
             >
               <ShoppingBag className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center
-                  rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
-                  {cartCount}
-                </span>
-              )}
+              <AnimatePresence>
+                {cartCount > 0 && (
+                  <motion.span
+                    key={cartCount}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                    className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center
+                      rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground"
+                  >
+                    {cartCount}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
 
             <div className="ml-1 hidden sm:block">

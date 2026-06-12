@@ -2,8 +2,11 @@
 
 import { motion } from "framer-motion";
 import { Check, Eye, Star } from "lucide-react";
+import { useState } from "react";
 
 import { PremiumButton } from "@/components/ui/PremiumButton";
+import { QuickViewModal } from "@/components/ui/QuickViewModal";
+import { useCart } from "@/hooks/useCart";
 import { cn, formatPrice } from "@/lib/utils";
 import type { Checklist } from "@/types";
 
@@ -20,14 +23,27 @@ interface ChecklistCardProps {
  * glow, while the "Quick View" affordance fades in. `group` is used so child
  * elements can react to the card's hover state without extra JS.
  *
- * TODO: wire "Quick View" to a glassmorphism modal, and "Add" to the cart
- * context once those exist.
+ * "Quick View" opens the glassmorphism modal; "Add to Cart" pushes into the
+ * cart context and opens the drawer for instant feedback.
  */
 export function ChecklistCard({ checklist, index = 0 }: ChecklistCardProps) {
   const { title, tagline, category, price, compareAtPrice, currency, itemCount, rating, accent } =
     checklist;
+  const { addItem, openDrawer } = useCart();
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+
+  const handleAddToCart = () => {
+    addItem(checklist);
+    openDrawer();
+  };
 
   return (
+    <>
+      <QuickViewModal
+        checklist={checklist}
+        isOpen={quickViewOpen}
+        onClose={() => setQuickViewOpen(false)}
+      />
     <motion.article
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -58,7 +74,12 @@ export function ChecklistCard({ checklist, index = 0 }: ChecklistCardProps) {
         {/* Quick View — revealed on hover. */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0
           transition-opacity duration-300 group-hover:opacity-100">
-          <PremiumButton size="sm" variant="secondary" leftIcon={<Eye className="h-4 w-4" />}>
+          <PremiumButton
+            size="sm"
+            variant="secondary"
+            leftIcon={<Eye className="h-4 w-4" />}
+            onClick={() => setQuickViewOpen(true)}
+          >
             Quick View
           </PremiumButton>
         </div>
@@ -89,11 +110,12 @@ export function ChecklistCard({ checklist, index = 0 }: ChecklistCardProps) {
               </span>
             )}
           </div>
-          <PremiumButton size="sm" variant="primary">
+          <PremiumButton size="sm" variant="primary" onClick={handleAddToCart}>
             Add to Cart
           </PremiumButton>
         </div>
       </div>
     </motion.article>
+    </>
   );
 }

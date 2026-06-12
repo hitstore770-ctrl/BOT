@@ -39,6 +39,11 @@ export interface Checklist {
   isBestSeller?: boolean;
 }
 
+/** A checklist that has been added to the cart, with a chosen quantity. */
+export interface CartItem extends Checklist {
+  quantity: number;
+}
+
 export interface Testimonial {
   id: string;
   name: string;

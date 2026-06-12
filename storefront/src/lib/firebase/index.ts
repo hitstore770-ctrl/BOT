@@ -1,5 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 import { firebaseConfig, isFirebaseConfigured } from "./config";
 
@@ -13,8 +14,8 @@ export { isFirebaseConfigured };
  * error. Initialization is lazy and only runs once config is actually present,
  * so the app never crashes before `.env.local` is populated.
  *
- * TODO(firestore/storage): add `getFirebaseDb()` / `getFirebaseStorage()`
- * accessors here following the same lazy, null-safe pattern when CRUD lands.
+ * TODO(storage): add a `getFirebaseStorage()` accessor here following the same
+ * lazy, null-safe pattern when product imagery uploads land.
  */
 export function getFirebaseApp(): FirebaseApp | null {
   if (!isFirebaseConfigured) {
@@ -37,4 +38,14 @@ export function getFirebaseAuth(): Auth | null {
   if (!app) return null;
   if (!authInstance) authInstance = getAuth(app);
   return authInstance;
+}
+
+let dbInstance: Firestore | null = null;
+
+/** Lazily resolve the Cloud Firestore instance, or null when unconfigured. */
+export function getFirebaseDb(): Firestore | null {
+  const app = getFirebaseApp();
+  if (!app) return null;
+  if (!dbInstance) dbInstance = getFirestore(app);
+  return dbInstance;
 }

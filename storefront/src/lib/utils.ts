@@ -23,3 +23,12 @@ export function formatCompact(value: number): string {
     maximumFractionDigits: 1,
   }).format(value);
 }
+
+/** Turn a title into a URL-safe slug, e.g. "My Checklist!" -> "my-checklist". */
+export function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}

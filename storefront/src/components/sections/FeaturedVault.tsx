@@ -3,18 +3,40 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { ChecklistCard } from "@/components/ui/ChecklistCard";
+import { ChecklistCardSkeleton } from "@/components/ui/ChecklistCardSkeleton";
 import { PremiumButton } from "@/components/ui/PremiumButton";
-import { featuredChecklists } from "@/data/checklists";
+import { getFeaturedChecklists } from "@/lib/firestore/checklists";
+import type { Checklist } from "@/types";
+
+const SKELETON_COUNT = 4;
 
 /**
  * "Featured Vault" — the best-selling checklists grid.
  *
- * Data is mock for now (see src/data/checklists.ts). Cards handle their own
- * staggered entrance animation via their `index` prop.
+ * Fetches best-sellers from Firestore (with a graceful seed fallback) and shows
+ * skeleton cards while loading. Cards handle their own staggered entrance.
  */
 export function FeaturedVault() {
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    getFeaturedChecklists()
+      .then((data) => {
+        if (active) setChecklists(data);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section id="vault" className="scroll-mt-20 py-20 md:py-28">
       <div className="container">
@@ -39,9 +61,13 @@ export function FeaturedVault() {
 
         {/* Responsive grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredChecklists.map((checklist, index) => (
-            <ChecklistCard key={checklist.id} checklist={checklist} index={index} />
-          ))}
+          {loading
+            ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                <ChecklistCardSkeleton key={i} />
+              ))
+            : checklists.map((checklist, index) => (
+                <ChecklistCard key={checklist.id} checklist={checklist} index={index} />
+              ))}
         </div>
 
         {/* Link to the full catalog */}

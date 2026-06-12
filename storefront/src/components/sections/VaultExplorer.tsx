@@ -7,43 +7,57 @@ import { ChecklistCard } from "@/components/ui/ChecklistCard";
 import { ChecklistCardSkeleton } from "@/components/ui/ChecklistCardSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchFilterBar } from "@/components/ui/SearchFilterBar";
-import { allChecklists } from "@/data/checklists";
+import { getChecklists } from "@/lib/firestore/checklists";
 import { fuzzyFilter } from "@/lib/fuzzy";
-
-/** "All" + every distinct category present in the catalog. */
-const CATEGORIES: string[] = [
-  "All",
-  ...Array.from(new Set(allChecklists.map((checklist) => checklist.category))),
-];
+import type { Checklist } from "@/types";
 
 const SKELETON_COUNT = 8;
 
 /** Build the searchable text for a checklist (title + tagline + category). */
-const searchableText = (checklist: (typeof allChecklists)[number]) =>
+const searchableText = (checklist: Checklist) =>
   `${checklist.title} ${checklist.tagline} ${checklist.category}`;
 
 /**
  * The Vault — full catalog browser with skeleton loading, fuzzy + voice search,
  * category filters, and Framer Motion layout shuffling.
+ *
+ * Data is fetched from Firestore (with a graceful seed fallback); skeleton
+ * cards show while the real fetch is in flight.
  */
 export function VaultExplorer() {
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
-  // Simulate a network fetch so the premium skeleton state is visible.
+  // Fetch the live catalog on mount.
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    let active = true;
+    getChecklists()
+      .then((data) => {
+        if (active) setChecklists(data);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  // "All" + every distinct category present in the fetched catalog.
+  const categories = useMemo<string[]>(
+    () => ["All", ...Array.from(new Set(checklists.map((checklist) => checklist.category)))],
+    [checklists],
+  );
 
   const results = useMemo(() => {
     const byCategory =
       activeCategory === "All"
-        ? allChecklists
-        : allChecklists.filter((checklist) => checklist.category === activeCategory);
+        ? checklists
+        : checklists.filter((checklist) => checklist.category === activeCategory);
     return fuzzyFilter(byCategory, query, searchableText);
-  }, [query, activeCategory]);
+  }, [checklists, query, activeCategory]);
 
   const clearFilters = () => {
     setQuery("");
@@ -69,7 +83,7 @@ export function VaultExplorer() {
       <SearchFilterBar
         query={query}
         onQueryChange={setQuery}
-        categories={CATEGORIES}
+        categories={categories}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
         resultCount={results.length}
